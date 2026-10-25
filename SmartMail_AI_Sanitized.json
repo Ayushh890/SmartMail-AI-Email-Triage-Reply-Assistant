@@ -1,0 +1,220 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "maxResults": 19,
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -208,
+        -144
+      ],
+      "id": "586b1c7f-a6a9-4c15-9baf-fea37e34cad3",
+      "name": "check for new mails"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "3b5b72a5-207e-4b0d-838a-409675ec2a5d",
+      "name": "Get a message"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a email responding agent.\n\nBelow are the content of latest emails i got.\n\n\nsubject : {{ $json.Subject }}\nBody :{{ $json.snippet }}\n\nYou have to do 2 things.\n1. specify the labels based on the message.\nuse the tools to get all the labels and ids from the email ad mention both of them properly.\nlabels can be one these..\ncourse\ndoubt\nsponsership\n\n2.As a smart agent draft a response for me so that i can reply in my email  with subject andd body.\n\nplease make sure thaat reply should be respectable and explain wherever required and  draft in html structure for better formatting",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        -112
+      ],
+      "id": "351d60cb-c6ce-424c-bd1c-5dd18cfcc742",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAlibabaCloud",
+      "typeVersion": 1.1,
+      "position": [
+        48,
+        224
+      ],
+      "id": "adad8882-a9d6-435e-ba89-7e3261d7a244",
+      "name": "Qwen Cloud Chat Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"label\": \"doubt\",\n  \"label_id\" : \"132454\",\n  \"subject\" : \"doubt_answer\",\n  \n  \"reply\": \"Hey ! thanks for reaching out\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        544,
+        144
+      ],
+      "id": "0177132b-1846-457b-9cec-e37d00bff4de",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Get a message').item.json.id }}",
+        "labelIds": "={{ $json.output.label_id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        592,
+        -112
+      ],
+      "id": "38b106b6-73c5-4f0b-b16b-d7efb3870edb",
+      "name": "Add label to message"
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $('AI Agent').item.json.output.subject }}",
+        "emailType": "html",
+        "message": "={{ $('AI Agent').item.json.output.reply }}",
+        "options": {
+          "threadId": "={{ $json.threadId }}",
+          "sendTo": "={{ $('Get a message').item.json.From }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        -112
+      ],
+      "id": "20678b97-392b-4b39-b9fe-79b5526eb68d",
+      "name": "Create a draft"
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        288,
+        160
+      ],
+      "id": "5b39f8f9-194e-453f-af1c-92d22c78884b",
+      "name": "Get many labels in Gmail"
+    }
+  ],
+  "connections": {
+    "check for new mails": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qwen Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Add label to message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add label to message": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many labels in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": []
+}
